@@ -53,9 +53,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ data: departures, error: null })
   } catch (err) {
-    console.error('[departures] Error:', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[departures] Error:', msg)
     return NextResponse.json(
-      { data: null, error: 'Internal server error' },
+      { data: null, error: msg },
       { status: 500 }
     )
   }
