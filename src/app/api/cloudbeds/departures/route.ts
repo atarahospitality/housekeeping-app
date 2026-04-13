@@ -40,6 +40,11 @@ export async function GET(request: Request) {
       )
     }
 
+    // Log raw shape of first reservation to diagnose field names
+    const rawFirst = reservationsRes.data?.[0]
+    console.log('[departures] raw reservation sample:', JSON.stringify(rawFirst ?? null))
+    console.log('[departures] raw hk sample:', JSON.stringify(housekeepingRes.data?.[0] ?? null))
+
     const housekeepingMap = buildHousekeepingMap(housekeepingRes.data)
     const departures = normalizeDepartures(reservationsRes.data, housekeepingMap)
 
@@ -48,10 +53,10 @@ export async function GET(request: Request) {
       if (a.checkoutStatus !== b.checkoutStatus) {
         return a.checkoutStatus === 'checked_out' ? -1 : 1
       }
-      return a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true })
+      return (a.roomNumber ?? '').localeCompare(b.roomNumber ?? '', undefined, { numeric: true })
     })
 
-    return NextResponse.json({ data: departures, error: null })
+    return NextResponse.json({ data: departures, error: null, _debug: { rawFirst } })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[departures] Error:', msg)
