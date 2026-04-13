@@ -109,10 +109,11 @@ export async function getReservationsForDate(
   const propertyId = process.env.CLOUDBEDS_PROPERTY_ID!
   const params = new URLSearchParams({
     propertyID: propertyId,
-    checkOutDateFrom: date,
-    checkOutDateTo: date,
-    // Include all statuses so we can show checkout state
-    status: 'checked_in,checked_out,not_confirmed,confirmed',
+    // Cloudbeds uses endDate for the departure/checkout date
+    endDateFrom: date,
+    endDateTo: date,
+    // Only departures: currently in-room or already checked out today
+    status: 'checked_in,checked_out',
     pageSize: '200',
     pageNumber: '1',
   })

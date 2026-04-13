@@ -19,18 +19,30 @@ export type CloudbedsReservationStatus =
   | 'canceled'
   | 'no_show'
 
+// A single room assignment nested inside a reservation
+export interface CloudbedsReservationRoom {
+  roomID: string
+  roomName: string          // room number/label e.g. "101"
+  roomTypeID?: string
+  roomTypeName: string
+}
+
 // A single reservation object from GET /getReservations
 export interface CloudbedsReservation {
   reservationID: string
-  roomID: string
-  roomName: string          // room number/label
-  roomTypeName: string
+  propertyID?: string
   guestName: string         // "FirstName LastName"
   status: CloudbedsReservationStatus
-  checkInDate: string       // YYYY-MM-DD
-  checkOutDate: string      // YYYY-MM-DD
-  adults: number
-  children: number
+  startDate: string         // YYYY-MM-DD  (check-in date)
+  endDate: string           // YYYY-MM-DD  (checkout / departure date)
+  adults: number | string
+  children: number | string
+  // Room assignments — may be array (multi-room) or absent if unassigned
+  rooms?: CloudbedsReservationRoom[]
+  // Some API responses put the first room inline at top level
+  roomID?: string
+  roomName?: string
+  roomTypeName?: string
 }
 
 // GET /getReservations response envelope

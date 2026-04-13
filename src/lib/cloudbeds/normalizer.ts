@@ -27,21 +27,30 @@ function firstNameOnly(fullName: string): string {
 /**
  * Combine a list of reservations with the live housekeeping status map
  * to produce the unified DepartureRoom list shown to housekeepers.
+ *
+ * Room data may live in r.rooms[0] (nested array) or as top-level fields
+ * depending on the Cloudbeds API version / response mode.
  */
 export function normalizeDepartures(
   reservations: CloudbedsReservation[],
   housekeepingMap: Map<string, CloudbedsHousekeepingRoom>
 ): DepartureRoom[] {
   return reservations.map((r) => {
-    const hk = housekeepingMap.get(r.roomID)
+    // Prefer nested rooms array, fall back to top-level fields
+    const firstRoom = r.rooms?.[0]
+    const roomID = firstRoom?.roomID ?? r.roomID ?? ''
+    const roomName = firstRoom?.roomName ?? r.roomName ?? ''
+    const roomTypeName = firstRoom?.roomTypeName ?? r.roomTypeName ?? ''
+
+    const hk = roomID ? housekeepingMap.get(roomID) : undefined
 
     return {
       reservationId: r.reservationID,
-      roomId: r.roomID,
-      roomNumber: r.roomName,
-      roomTypeName: r.roomTypeName,
+      roomId: roomID,
+      roomNumber: roomName,
+      roomTypeName,
       guestFirstName: firstNameOnly(r.guestName),
-      checkOutDate: r.checkOutDate,
+      checkOutDate: r.endDate,          // Cloudbeds uses endDate for departure
       checkoutStatus: mapCheckoutStatus(r.status),
       roomCondition: mapRoomCondition(hk?.roomCondition ?? 'dirty'),
       lastUpdated: new Date().toISOString(),
