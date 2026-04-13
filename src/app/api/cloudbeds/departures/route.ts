@@ -40,10 +40,11 @@ export async function GET(request: Request) {
       )
     }
 
-    // Log raw shape of first reservation to diagnose field names
+    // Debug: log total count + first reservation shape
     const rawFirst = reservationsRes.data?.[0]
-    console.log('[departures] raw reservation sample:', JSON.stringify(rawFirst ?? null))
-    console.log('[departures] raw hk sample:', JSON.stringify(housekeepingRes.data?.[0] ?? null))
+    console.log(`[departures] Cloudbeds returned ${reservationsRes.data?.length ?? 0} reservations (total: ${(reservationsRes as any).total ?? '?'}) for date=${date}`)
+    console.log('[departures] raw reservation[0]:', JSON.stringify(rawFirst ?? null))
+    console.log('[departures] raw hk[0]:', JSON.stringify(housekeepingRes.data?.[0] ?? null))
 
     const housekeepingMap = buildHousekeepingMap(housekeepingRes.data)
     const departures = normalizeDepartures(reservationsRes.data, housekeepingMap)
