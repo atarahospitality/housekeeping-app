@@ -6,6 +6,7 @@
 import type {
   CloudbedsGetReservationsResponse,
   CloudbedsGetHousekeepingStatusResponse,
+  CloudbedsGetReservationAssignmentsResponse,
   CloudbedsPostHousekeepingStatusRequest,
   CloudbedsPostHousekeepingStatusResponse,
   CloudbedsTokenResponse,
@@ -135,6 +136,26 @@ export async function getHousekeepingStatus(): Promise<CloudbedsGetHousekeepingS
   return cloudbedsFetch<CloudbedsGetHousekeepingStatusResponse>(
     `/getHousekeepingStatus?${params.toString()}`,
     { cache: 'no-store' } // always fresh for status checks
+  )
+}
+
+/**
+ * Get room assignments for a given date.
+ * Uses GET /getReservationAssignments?date=YYYY-MM-DD
+ * Returns a mapping of reservationID → roomID/roomName for that day.
+ */
+export async function getReservationAssignments(
+  date: string // YYYY-MM-DD
+): Promise<CloudbedsGetReservationAssignmentsResponse> {
+  const propertyId = process.env.CLOUDBEDS_PROPERTY_ID!
+  const params = new URLSearchParams({
+    propertyID: propertyId,
+    date,
+  })
+
+  return cloudbedsFetch<CloudbedsGetReservationAssignmentsResponse>(
+    `/getReservationAssignments?${params.toString()}`,
+    { next: { revalidate: 30 } }
   )
 }
 

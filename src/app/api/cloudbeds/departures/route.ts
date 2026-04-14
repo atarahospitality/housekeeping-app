@@ -4,8 +4,8 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getReservationsForDate, getHousekeepingStatus } from '@/lib/cloudbeds/client'
-import { normalizeDepartures, buildHousekeepingMap } from '@/lib/cloudbeds/normalizer'
+import { getReservationsForDate, getHousekeepingStatus, getReservationAssignments } from '@/lib/cloudbeds/client'
+import { normalizeDepartures, buildHousekeepingMap, buildAssignmentMap } from '@/lib/cloudbeds/normalizer'
 import { todayYMD, withRetry } from '@/lib/utils'
 
 export async function GET(request: Request) {
@@ -20,10 +20,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date') ?? todayYMD()
 
-    // Fetch both in parallel with retry
-    const [reservationsRes, housekeepingRes] = await Promise.all([
+    // Fetch all three in parallel with retry
+    const [reservationsRes, housekeepingRes, assignmentsRes] = await Promise.all([
       withRetry(() => getReservationsForDate(date)),
       withRetry(() => getHousekeepingStatus()),
+      withRetry(() => getReservationAssignments(date)).catch(() => null), // non-fatal
     ])
 
     if (!reservationsRes.success) {
@@ -40,14 +41,18 @@ export async function GET(request: Request) {
       )
     }
 
-    // Debug: log total count + first reservation shape
+    // Debug: log raw shapes so we can verify field names
     const rawFirst = reservationsRes.data?.[0]
-    console.log(`[departures] Cloudbeds returned ${reservationsRes.data?.length ?? 0} reservations (total: ${(reservationsRes as any).total ?? '?'}) for date=${date}`)
+    const rawAssignment = assignmentsRes?.data?.[0]
+    console.log(`[departures] reservations count=${reservationsRes.data?.length ?? 0} date=${date}`)
     console.log('[departures] raw reservation[0]:', JSON.stringify(rawFirst ?? null))
+    console.log('[departures] raw assignment[0]:', JSON.stringify(rawAssignment ?? null))
     console.log('[departures] raw hk[0]:', JSON.stringify(housekeepingRes.data?.[0] ?? null))
 
     const housekeepingMap = buildHousekeepingMap(housekeepingRes.data)
-    const departures = normalizeDepartures(reservationsRes.data, housekeepingMap)
+    // Build reservationID → room assignment map (if endpoint returned data)
+    const assignmentMap = buildAssignmentMap(assignmentsRes?.data ?? [])
+    const departures = normalizeDepartures(reservationsRes.data, housekeepingMap, assignmentMap)
 
     // Sort: checked_out rooms first (ready to clean), then by room number
     departures.sort((a, b) => {
@@ -57,7 +62,11 @@ export async function GET(request: Request) {
       return (a.roomNumber ?? '').localeCompare(b.roomNumber ?? '', undefined, { numeric: true })
     })
 
-    return NextResponse.json({ data: departures, error: null, _debug: { rawFirst } })
+    return NextResponse.json({
+      data: departures,
+      error: null,
+      _debug: { rawFirst, rawAssignment, reservationCount: reservationsRes.data?.length },
+    })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[departures] Error:', msg)

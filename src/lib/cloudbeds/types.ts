@@ -70,6 +70,28 @@ export interface CloudbedsGetHousekeepingStatusResponse {
   data: CloudbedsHousekeepingRoom[]
 }
 
+// GET /getReservationAssignments — links rooms to reservations for a given date
+export interface CloudbedsReservationAssignment {
+  reservationID: string
+  roomID: string
+  roomName: string
+  roomTypeID?: string
+  roomTypeName?: string
+  guestName?: string
+  startDate?: string
+  endDate?: string
+  status?: string
+  // Some API versions nest inside assignedRooms or similar — capture both
+  [key: string]: unknown
+}
+
+export interface CloudbedsGetReservationAssignmentsResponse {
+  success: boolean
+  data: CloudbedsReservationAssignment[]
+  count?: number
+  total?: number
+}
+
 // POST /postHousekeepingStatus request body
 export interface CloudbedsPostHousekeepingStatusRequest {
   propertyID: string
