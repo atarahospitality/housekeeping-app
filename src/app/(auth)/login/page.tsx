@@ -52,7 +52,7 @@ export default function LoginPage() {
           >
             <BedDouble className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Housekeeping</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Aqua Aire Housekeeping</h1>
           <p className="text-gray-500 text-sm mt-1">Sign in to your account</p>
         </div>
 
