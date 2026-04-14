@@ -77,7 +77,14 @@ export async function GET(request: Request) {
     return NextResponse.json({
       data: departures,
       error: null,
-      _debug: { rawFirst, rawAssignmentToday, rawAssignmentYesterday, reservationCount: reservationsRes.data?.length },
+      _debug: {
+        rawFirst,
+        rawAssignmentToday,
+        rawAssignmentYesterday,
+        rawHkRoom: housekeepingRes.data?.[0] ?? null,
+        reservationCount: reservationsRes.data?.length,
+        hkRoomCount: housekeepingRes.data?.length,
+      },
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

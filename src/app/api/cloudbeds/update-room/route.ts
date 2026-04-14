@@ -26,16 +26,24 @@ export async function POST(request: Request) {
       )
     }
 
-    // Call Cloudbeds with retry
-    const result = await withRetry(
-      () => updateRoomCondition(roomId, condition),
-      3,
-      500
-    )
+    // Call Cloudbeds (no retry — retrying a failed write could double-update)
+    let result: Awaited<ReturnType<typeof updateRoomCondition>>
+    try {
+      result = await updateRoomCondition(roomId, condition)
+    } catch (cbErr) {
+      const msg = cbErr instanceof Error ? cbErr.message : String(cbErr)
+      console.error('[update-room] Cloudbeds API threw:', msg)
+      return NextResponse.json(
+        { success: false, error: `Cloudbeds error: ${msg}` },
+        { status: 502 }
+      )
+    }
 
     if (!result.success) {
+      const msg = result.message ?? 'No message returned'
+      console.error('[update-room] Cloudbeds returned success=false:', msg, '| roomId:', roomId, '| condition:', condition)
       return NextResponse.json(
-        { error: 'Cloudbeds rejected the update' },
+        { success: false, error: `Cloudbeds rejected: ${msg}` },
         { status: 502 }
       )
     }
