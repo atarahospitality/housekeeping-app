@@ -4,19 +4,21 @@ import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, BedDouble } from 'lucide-react'
 import { RoomCard } from '@/components/room-card'
 import { Button } from '@/components/ui/button'
-import { todayYMD, formatDate } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 import type { DepartureRoom, RoomCondition } from '@/types'
 
 const POLL_INTERVAL_MS = 30_000 // 30 seconds
 
-export function DeparturesList() {
+interface DeparturesListProps {
+  date: string // YYYY-MM-DD
+}
+
+export function DeparturesList({ date }: DeparturesListProps) {
   const [rooms, setRooms] = useState<DepartureRoom[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-
-  const today = todayYMD()
 
   const fetchDepartures = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true)
@@ -24,7 +26,7 @@ export function DeparturesList() {
     setError(null)
 
     try {
-      const res = await fetch(`/api/cloudbeds/departures?date=${today}`, {
+      const res = await fetch(`/api/cloudbeds/departures?date=${date}`, {
         cache: 'no-store',
       })
       const json = await res.json()
@@ -41,10 +43,12 @@ export function DeparturesList() {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [today])
+  }, [date])
 
-  // Initial load
+  // Reset + reload when date changes
   useEffect(() => {
+    setRooms([])
+    setLastUpdated(null)
     fetchDepartures()
   }, [fetchDepartures])
 
@@ -104,7 +108,7 @@ export function DeparturesList() {
         <BedDouble className="h-12 w-12 text-gray-300 mx-auto mb-4" />
         <p className="text-gray-600 font-medium text-lg">No departures today</p>
         <p className="text-gray-400 text-sm mt-1">
-          All clear for {formatDate(today)}
+          All clear for {formatDate(date)}
         </p>
       </div>
     )
