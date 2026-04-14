@@ -20,11 +20,18 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date') ?? todayYMD()
 
-    // Fetch all three in parallel with retry
-    const [reservationsRes, housekeepingRes, assignmentsRes] = await Promise.all([
+    // Yesterday's date — checked-out guests appear in yesterday's assignments
+    // (they've left today so they're gone from today's assignment list)
+    const yesterday = new Date(date)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().slice(0, 10)
+
+    // Fetch all four in parallel with retry
+    const [reservationsRes, housekeepingRes, assignmentsTodayRes, assignmentsYesterdayRes] = await Promise.all([
       withRetry(() => getReservationsForDate(date)),
       withRetry(() => getHousekeepingStatus()),
-      withRetry(() => getReservationAssignments(date)).catch(() => null), // non-fatal
+      withRetry(() => getReservationAssignments(date)).catch(() => null),
+      withRetry(() => getReservationAssignments(yesterdayStr)).catch(() => null),
     ])
 
     if (!reservationsRes.success) {
@@ -43,15 +50,20 @@ export async function GET(request: Request) {
 
     // Debug: log raw shapes so we can verify field names
     const rawFirst = reservationsRes.data?.[0]
-    const rawAssignment = assignmentsRes?.data?.[0]
+    const rawAssignmentToday = assignmentsTodayRes?.data?.[0]
+    const rawAssignmentYesterday = assignmentsYesterdayRes?.data?.[0]
     console.log(`[departures] reservations count=${reservationsRes.data?.length ?? 0} date=${date}`)
     console.log('[departures] raw reservation[0]:', JSON.stringify(rawFirst ?? null))
-    console.log('[departures] raw assignment[0]:', JSON.stringify(rawAssignment ?? null))
-    console.log('[departures] raw hk[0]:', JSON.stringify(housekeepingRes.data?.[0] ?? null))
+    console.log('[departures] raw assignment today[0]:', JSON.stringify(rawAssignmentToday ?? null))
+    console.log('[departures] raw assignment yesterday[0]:', JSON.stringify(rawAssignmentYesterday ?? null))
 
     const housekeepingMap = buildHousekeepingMap(housekeepingRes.data)
-    // Build reservationID → room assignment map (if endpoint returned data)
-    const assignmentMap = buildAssignmentMap(assignmentsRes?.data ?? [])
+    // Merge yesterday + today assignments — today's entries win (for still-checked-in guests)
+    // Yesterday's entries catch guests who already checked out today
+    const assignmentMap = buildAssignmentMap(
+      assignmentsYesterdayRes?.data ?? [],
+      assignmentsTodayRes?.data ?? []
+    )
     const departures = normalizeDepartures(reservationsRes.data, housekeepingMap, assignmentMap)
 
     // Sort: checked_out rooms first (ready to clean), then by room number
@@ -65,7 +77,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       data: departures,
       error: null,
-      _debug: { rawFirst, rawAssignment, reservationCount: reservationsRes.data?.length },
+      _debug: { rawFirst, rawAssignmentToday, rawAssignmentYesterday, reservationCount: reservationsRes.data?.length },
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

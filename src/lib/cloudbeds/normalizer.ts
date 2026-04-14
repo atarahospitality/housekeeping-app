@@ -45,13 +45,14 @@ export function normalizeDepartures(
     let roomName = firstRoom?.roomName ?? r.roomName ?? ''
     let roomTypeName = firstRoom?.roomTypeName ?? r.roomTypeName ?? ''
 
-    // 2. Fall back to reservation assignments map
+    // 2. Fall back to reservation assignments map (room data in assigned[0])
     if (!roomID) {
       const assignment = assignmentMap.get(r.reservationID)
-      if (assignment) {
-        roomID = assignment.roomID ?? ''
-        roomName = assignment.roomName ?? ''
-        roomTypeName = assignment.roomTypeName ?? ''
+      if (assignment?.assigned?.[0]) {
+        const assignedRoom = assignment.assigned[0]
+        roomID = assignedRoom.roomID ?? ''
+        roomName = assignedRoom.roomName ?? ''
+        roomTypeName = assignedRoom.roomTypeName ?? ''
       }
     }
 
@@ -73,11 +74,19 @@ export function normalizeDepartures(
 
 /**
  * Build a Map<reservationID, assignment> for O(1) lookup.
+ * Merges multiple assignment arrays (e.g. today + yesterday) — earlier entries
+ * are overwritten by later ones, so pass yesterday first, today second.
  */
 export function buildAssignmentMap(
-  assignments: CloudbedsReservationAssignment[]
+  ...assignmentLists: CloudbedsReservationAssignment[][]
 ): Map<string, CloudbedsReservationAssignment> {
-  return new Map(assignments.map((a) => [a.reservationID, a]))
+  const map = new Map<string, CloudbedsReservationAssignment>()
+  for (const list of assignmentLists) {
+    for (const a of list) {
+      map.set(a.reservationID, a)
+    }
+  }
+  return map
 }
 
 /**

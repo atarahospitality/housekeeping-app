@@ -70,19 +70,25 @@ export interface CloudbedsGetHousekeepingStatusResponse {
   data: CloudbedsHousekeepingRoom[]
 }
 
-// GET /getReservationAssignments — links rooms to reservations for a given date
-export interface CloudbedsReservationAssignment {
-  reservationID: string
+// A single room inside an assignment's "assigned" array
+export interface CloudbedsAssignedRoom {
   roomID: string
   roomName: string
-  roomTypeID?: string
   roomTypeName?: string
+  roomTypeID?: string
+  roomTypeNameShort?: string
+  subReservationID?: string
+}
+
+// GET /getReservationAssignments — links rooms to reservations for a given date
+// Real response shape: { reservationID, guestName, assigned: [ { roomID, roomName, ... } ] }
+export interface CloudbedsReservationAssignment {
+  reservationID: string
   guestName?: string
   startDate?: string
   endDate?: string
   status?: string
-  // Some API versions nest inside assignedRooms or similar — capture both
-  [key: string]: unknown
+  assigned: CloudbedsAssignedRoom[]   // ← array, NOT top-level fields
 }
 
 export interface CloudbedsGetReservationAssignmentsResponse {
