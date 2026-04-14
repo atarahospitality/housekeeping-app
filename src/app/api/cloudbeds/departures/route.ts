@@ -48,14 +48,7 @@ export async function GET(request: Request) {
       )
     }
 
-    // Debug: log raw shapes so we can verify field names
-    const rawFirst = reservationsRes.data?.[0]
-    const rawAssignmentToday = assignmentsTodayRes?.data?.[0]
-    const rawAssignmentYesterday = assignmentsYesterdayRes?.data?.[0]
-    console.log(`[departures] reservations count=${reservationsRes.data?.length ?? 0} date=${date}`)
-    console.log('[departures] raw reservation[0]:', JSON.stringify(rawFirst ?? null))
-    console.log('[departures] raw assignment today[0]:', JSON.stringify(rawAssignmentToday ?? null))
-    console.log('[departures] raw assignment yesterday[0]:', JSON.stringify(rawAssignmentYesterday ?? null))
+    console.log(`[departures] count=${reservationsRes.data?.length ?? 0} date=${date}`)
 
     const housekeepingMap = buildHousekeepingMap(housekeepingRes.data)
     // Merge yesterday + today assignments — today's entries win (for still-checked-in guests)
@@ -74,18 +67,7 @@ export async function GET(request: Request) {
       return (a.roomNumber ?? '').localeCompare(b.roomNumber ?? '', undefined, { numeric: true })
     })
 
-    return NextResponse.json({
-      data: departures,
-      error: null,
-      _debug: {
-        rawFirst,
-        rawAssignmentToday,
-        rawAssignmentYesterday,
-        rawHkRoom: housekeepingRes.data?.[0] ?? null,
-        reservationCount: reservationsRes.data?.length,
-        hkRoomCount: housekeepingRes.data?.length,
-      },
-    })
+    return NextResponse.json({ data: departures, error: null })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[departures] Error:', msg)
