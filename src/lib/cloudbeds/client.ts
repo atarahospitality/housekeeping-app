@@ -169,17 +169,20 @@ export async function updateRoomCondition(
   condition: 'clean' | 'dirty'
 ): Promise<CloudbedsPostHousekeepingStatusResponse> {
   const propertyId = process.env.CLOUDBEDS_PROPERTY_ID!
-  const body: CloudbedsPostHousekeepingStatusRequest = {
+
+  // Cloudbeds POST endpoints expect form-encoded bodies, not JSON
+  const body = new URLSearchParams({
     propertyID: propertyId,
     roomID: roomId,
     condition,
-  }
+  })
 
   return cloudbedsFetch<CloudbedsPostHousekeepingStatusResponse>(
     '/postHousekeepingStatus',
     {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: body.toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       cache: 'no-store',
     }
   )
