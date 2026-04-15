@@ -9,6 +9,7 @@ import type {
   CloudbedsReservation,
   CloudbedsHousekeepingRoom,
   CloudbedsReservationAssignment,
+  CloudbedsAssignedRoom,
 } from './types'
 
 function mapCheckoutStatus(status: string): CheckoutStatus {
@@ -27,49 +28,68 @@ function firstNameOnly(fullName: string): string {
 
 /**
  * Combine reservations + room assignments + housekeeping status into DepartureRoom[].
+ * A single reservation can have multiple rooms (group booking) — we expand it into
+ * one DepartureRoom card per assigned room.
  *
  * Priority for room data:
- *  1. r.rooms[0] or top-level roomID (if Cloudbeds includes it in getReservations)
- *  2. assignmentMap[reservationID] from getReservationAssignments
- *  3. Falls back to empty strings (cards render but mark-clean will fail)
+ *  1. r.rooms[] or top-level roomID (if Cloudbeds includes it in getReservations)
+ *  2. assignment.assigned[] from getReservationAssignments
+ *  3. Falls back to a single card with empty room fields
  */
 export function normalizeDepartures(
   reservations: CloudbedsReservation[],
   housekeepingMap: Map<string, CloudbedsHousekeepingRoom>,
   assignmentMap: Map<string, CloudbedsReservationAssignment> = new Map()
 ): DepartureRoom[] {
-  return reservations.map((r) => {
-    // 1. Try nested rooms array or top-level room fields
-    const firstRoom = r.rooms?.[0]
-    let roomID = firstRoom?.roomID ?? r.roomID ?? ''
-    let roomName = firstRoom?.roomName ?? r.roomName ?? ''
-    let roomTypeName = firstRoom?.roomTypeName ?? r.roomTypeName ?? ''
+  const results: DepartureRoom[] = []
 
-    // 2. Fall back to reservation assignments map (room data in assigned[0])
-    if (!roomID) {
-      const assignment = assignmentMap.get(r.reservationID)
-      if (assignment?.assigned?.[0]) {
-        const assignedRoom = assignment.assigned[0]
-        roomID = assignedRoom.roomID ?? ''
-        roomName = assignedRoom.roomName ?? ''
-        roomTypeName = assignedRoom.roomTypeName ?? ''
+  for (const r of reservations) {
+    const guestFirstName = firstNameOnly(r.guestName)
+    const checkoutStatus = mapCheckoutStatus(r.status)
+
+    // Collect all assigned rooms for this reservation
+    // Priority: r.rooms[] from getReservations, else assignment.assigned[]
+    const assignedRooms: CloudbedsAssignedRoom[] =
+      r.rooms && r.rooms.length > 0
+        ? r.rooms
+        : assignmentMap.get(r.reservationID)?.assigned ?? []
+
+    if (assignedRooms.length > 0) {
+      // One card per room
+      for (const assignedRoom of assignedRooms) {
+        const roomID = assignedRoom.roomID ?? ''
+        const hk = roomID ? housekeepingMap.get(roomID) : undefined
+        results.push({
+          reservationId: r.reservationID,
+          roomId: roomID,
+          roomNumber: assignedRoom.roomName ?? '',
+          roomTypeName: assignedRoom.roomTypeName ?? '',
+          guestFirstName,
+          checkOutDate: r.endDate,
+          checkoutStatus,
+          roomCondition: mapRoomCondition(hk?.roomCondition ?? 'dirty'),
+          lastUpdated: new Date().toISOString(),
+        })
       }
+    } else {
+      // No room data available — emit one card with empty room fields
+      const roomID = r.roomID ?? ''
+      const hk = roomID ? housekeepingMap.get(roomID) : undefined
+      results.push({
+        reservationId: r.reservationID,
+        roomId: roomID,
+        roomNumber: r.roomName ?? '',
+        roomTypeName: r.roomTypeName ?? '',
+        guestFirstName,
+        checkOutDate: r.endDate,
+        checkoutStatus,
+        roomCondition: mapRoomCondition(hk?.roomCondition ?? 'dirty'),
+        lastUpdated: new Date().toISOString(),
+      })
     }
+  }
 
-    const hk = roomID ? housekeepingMap.get(roomID) : undefined
-
-    return {
-      reservationId: r.reservationID,
-      roomId: roomID,
-      roomNumber: roomName,
-      roomTypeName,
-      guestFirstName: firstNameOnly(r.guestName),
-      checkOutDate: r.endDate,
-      checkoutStatus: mapCheckoutStatus(r.status),
-      roomCondition: mapRoomCondition(hk?.roomCondition ?? 'dirty'),
-      lastUpdated: new Date().toISOString(),
-    }
-  })
+  return results
 }
 
 /**
