@@ -13,7 +13,9 @@ import type {
 } from './types'
 
 function mapCheckoutStatus(status: string): CheckoutStatus {
-  return status === 'checked_out' ? 'checked_out' : 'not_checked_out'
+  if (status === 'checked_out') return 'checked_out'
+  if (status === 'confirmed' || status === 'not_confirmed') return 'not_arrived'
+  return 'not_checked_out' // checked_in
 }
 
 function mapRoomCondition(condition: string): RoomCondition {

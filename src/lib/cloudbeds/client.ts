@@ -101,27 +101,37 @@ async function cloudbedsFetch<T>(
 // ── Public API methods ────────────────────────────────────────────────────────
 
 /**
- * Get all reservations checking out today (or on a given date).
- * Uses GET /getReservations with checkOutDateFrom=date&checkOutDateTo=date.
+ * Get all reservations checking out on a given date.
+ * Uses GET /getReservations with checkOutFrom/checkOutTo filters.
+ *
+ * Status filter differs by date:
+ *  - Today: checked_in (still in room) + checked_out (already left)
+ *  - Future: confirmed + not_confirmed (not arrived yet) + checked_in (early check-in)
  */
 export async function getReservationsForDate(
   date: string // YYYY-MM-DD
 ): Promise<CloudbedsGetReservationsResponse> {
   const propertyId = process.env.CLOUDBEDS_PROPERTY_ID!
+
+  const today = new Date().toISOString().slice(0, 10)
+  const isFuture = date > today
+
+  const status = isFuture
+    ? 'confirmed,not_confirmed,checked_in'  // guest may not have arrived yet
+    : 'checked_in,checked_out'              // today: in-room or already gone
+
   const params = new URLSearchParams({
     propertyID: propertyId,
-    // Correct Cloudbeds v1.2 params for filtering by checkout/departure date
     checkOutFrom: date,
     checkOutTo: date,
-    // Only departures: currently in-room or already checked out today
-    status: 'checked_in,checked_out',
+    status,
     pageSize: '200',
     pageNumber: '1',
   })
 
   return cloudbedsFetch<CloudbedsGetReservationsResponse>(
     `/getReservations?${params.toString()}`,
-    { next: { revalidate: 30 } } // 30s cache — polling model
+    { next: { revalidate: 30 } }
   )
 }
 

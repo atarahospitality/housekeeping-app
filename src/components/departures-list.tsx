@@ -116,7 +116,8 @@ export function DeparturesList({ date }: DeparturesListProps) {
 
   // ── Room groups ───────────────────────────────────────────────────────────
   const checkedOut = rooms.filter((r) => r.checkoutStatus === 'checked_out')
-  const notYet = rooms.filter((r) => r.checkoutStatus !== 'checked_out')
+  const notYet = rooms.filter((r) => r.checkoutStatus === 'not_checked_out')
+  const notArrived = rooms.filter((r) => r.checkoutStatus === 'not_arrived')
 
   return (
     <div>
@@ -158,14 +159,32 @@ export function DeparturesList({ date }: DeparturesListProps) {
         </section>
       )}
 
-      {/* Not yet checked out */}
+      {/* Still in room */}
       {notYet.length > 0 && (
-        <section>
+        <section className="mb-6">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3 px-1">
             Still Occupied ({notYet.length})
           </h2>
           <div className="space-y-3">
             {notYet.map((room) => (
+              <RoomCard
+                key={room.roomId}
+                room={room}
+                onConditionChange={handleConditionChange}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Future reservations — guest not yet arrived */}
+      {notArrived.length > 0 && (
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3 px-1">
+            Expected Departures ({notArrived.length})
+          </h2>
+          <div className="space-y-3">
+            {notArrived.map((room) => (
               <RoomCard
                 key={room.roomId}
                 room={room}

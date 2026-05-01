@@ -13,8 +13,9 @@ export interface AppUser {
 
 // Checkout status as reflected from Cloudbeds reservation status
 export type CheckoutStatus =
-  | 'not_checked_out' // Guest still in room
-  | 'checked_out'     // Guest departed
+  | 'not_checked_out'   // Guest currently in room (checked_in)
+  | 'checked_out'       // Guest departed
+  | 'not_arrived'       // Future reservation — guest hasn't checked in yet
 
 // Housekeeping condition from Cloudbeds
 export type RoomCondition = 'clean' | 'dirty'

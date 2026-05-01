@@ -18,6 +18,7 @@ export function RoomCard({ room, onConditionChange }: RoomCardProps) {
   const { showToast } = useToast()
 
   const isCheckedOut = room.checkoutStatus === 'checked_out'
+  const isNotArrived = room.checkoutStatus === 'not_arrived'
   const isClean = room.roomCondition === 'clean'
 
   async function handleToggle() {
@@ -97,6 +98,11 @@ export function RoomCard({ room, onConditionChange }: RoomCardProps) {
                 <>
                   <CheckCircle2 className="h-3 w-3" />
                   Checked Out
+                </>
+              ) : isNotArrived ? (
+                <>
+                  <Clock className="h-3 w-3" />
+                  Not Arrived Yet
                 </>
               ) : (
                 <>
