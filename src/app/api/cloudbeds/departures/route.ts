@@ -3,20 +3,12 @@
 // Server-side only — Cloudbeds keys never reach the browser.
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { getReservationsForDate, getHousekeepingStatus, getReservationAssignments } from '@/lib/cloudbeds/client'
 import { normalizeDepartures, buildHousekeepingMap, buildAssignmentMap } from '@/lib/cloudbeds/normalizer'
 import { todayYMD, withRetry } from '@/lib/utils'
 
 export async function GET(request: Request) {
   try {
-    // Auth check
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date') ?? todayYMD()
 
